@@ -527,8 +527,9 @@ export default function App() {
     return ordered;
   };
 
+  // Initialize ordered questions list
   const orderedQuestionsList = getOrderedQuestions();
-  const currentQuestion = orderedQuestionsList[currentQuestionIndex];
+  const currentQuestion = orderedQuestionsList && orderedQuestionsList[currentQuestionIndex];
 
   // Maximum possible score (36 puzzle blocks total across all 5 questions)
   const maxPossibleScore = 36;
@@ -574,6 +575,11 @@ export default function App() {
       setFeedbackMessage('Please enter a team name before starting the quiz.');
       return;
     }
+
+    // Initialize question order and ordered questions
+    getQuestionOrder();
+    getOrderedQuestions();
+
     setQuizStarted(true);
     setQuizComplete(false);
     setCurrentQuestionIndex(0);
@@ -602,7 +608,12 @@ export default function App() {
 
   const handleNextQuestion = () => {
     // Check if all puzzle blocks in current question are answered
-    const currentQuestion = questions[currentQuestionIndex];
+    const currentQuestion = orderedQuestionsList && orderedQuestionsList[currentQuestionIndex];
+    if (!currentQuestion) {
+      setFeedbackMessage('Error: Question not found. Please refresh and try again.');
+      return;
+    }
+
     const unansweredBlocks = currentQuestion.codeBlocks.filter((block, blockIndex) => {
       if (block.isPuzzle) {
         const answerKey = `${currentQuestionIndex}-${blockIndex}`;
@@ -624,7 +635,7 @@ export default function App() {
       [currentQuestionIndex]: timeTaken
     });
 
-    if (currentQuestionIndex < questions.length - 1) {
+    if (currentQuestionIndex < orderedQuestionsList.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setFeedbackMessage(''); // Clear any previous messages
       setShowValidation(false); // Reset validation state
@@ -860,7 +871,7 @@ export default function App() {
           <>
             <div className="flex justify-between items-center mb-6">
               <div className="text-2xl font-bold">
-                Question {currentQuestionIndex + 1} of {questions.length}
+                Question {currentQuestionIndex + 1} of {orderedQuestionsList ? orderedQuestionsList.length : 0}
               </div>
               <div className="text-2xl font-bold">
                 Time Remaining: {formatTime(timer)}
@@ -870,7 +881,7 @@ export default function App() {
             {/* Progress Indicator */}
             <div className="mb-6">
               <div className="flex justify-center space-x-2">
-                {questions.map((_, index) => {
+                {orderedQuestionsList && orderedQuestionsList.map((_, index) => {
                   const hasAnswer = Object.keys(selectedAnswers).some(key => key.startsWith(`${index}-`));
                   const isCurrent = index === currentQuestionIndex;
                   const isCompleted = index < currentQuestionIndex;
@@ -904,14 +915,16 @@ export default function App() {
               </div>
             )}
 
-            <QuestionComponent
-              question={currentQuestion}
-              questionIndex={currentQuestionIndex}
-              selectedAnswers={selectedAnswers}
-              onAnswerClick={handleAnswerClick}
-              quizComplete={quizComplete}
-              showValidation={showValidation}
-            />
+            {currentQuestion && (
+              <QuestionComponent
+                question={currentQuestion}
+                questionIndex={currentQuestionIndex}
+                selectedAnswers={selectedAnswers}
+                onAnswerClick={handleAnswerClick}
+                quizComplete={quizComplete}
+                showValidation={showValidation}
+              />
+            )}
 
             <div className="flex justify-center gap-4 mt-8">
               <button
